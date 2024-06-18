@@ -15,15 +15,18 @@
  */
 package com.google.ar.core.examples.kotlin.helloar
 
+import android.opengl.GLES20
 import android.opengl.GLES30
 import android.opengl.Matrix
 import android.util.Log
+import android.view.MotionEvent
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import com.google.ar.core.Anchor
 import com.google.ar.core.Camera
 import com.google.ar.core.DepthPoint
 import com.google.ar.core.Frame
+import com.google.ar.core.HitResult
 import com.google.ar.core.InstantPlacementPoint
 import com.google.ar.core.LightEstimate
 import com.google.ar.core.Plane
@@ -46,8 +49,11 @@ import com.google.ar.core.examples.java.common.samplerender.arcore.PlaneRenderer
 import com.google.ar.core.examples.java.common.samplerender.arcore.SpecularCubemapFilter
 import com.google.ar.core.exceptions.CameraNotAvailableException
 import com.google.ar.core.exceptions.NotYetAvailableException
+import com.google.ar.sceneform.AnchorNode
+import com.google.ar.sceneform.NodeParent
 import java.io.IOException
 import java.nio.ByteBuffer
+import java.nio.ByteOrder
 
 /** Renders the HelloAR application using our example Renderer. */
 class HelloArRenderer(val activity: HelloArActivity) :
@@ -109,7 +115,7 @@ class HelloArRenderer(val activity: HelloArActivity) :
   lateinit var virtualObjectAlbedoTexture: Texture
   lateinit var virtualObjectAlbedoInstantPlacementTexture: Texture
 
-  private val wrappedAnchors = mutableListOf<WrappedAnchor>()
+  val wrappedAnchors = mutableListOf<WrappedAnchor>()
 
   // Environmental HDR
   lateinit var dfgTexture: Texture
@@ -311,10 +317,17 @@ class HelloArRenderer(val activity: HelloArActivity) :
         // spam the logcat with this.
       }
     }
+    render.useFramebuffer(virtualSceneFramebuffer)
 
     // Handle one tap per frame.
     handleTap(frame, camera)
 
+    // Kết thúc vẽ trên framebuffer của SampleRender
+    render.useFramebuffer(null) // Quay lại framebuffer mặc định
+
+
+    // Draw the line between anchors
+//    drawLine()
     // Keep the screen unlocked while tracking, but allow it to lock when tracking stops.
     trackingStateHelper.updateKeepScreenOnFlag(camera.trackingState)
 
@@ -432,6 +445,34 @@ class HelloArRenderer(val activity: HelloArActivity) :
     updateSphericalHarmonicsCoefficients(lightEstimate.environmentalHdrAmbientSphericalHarmonics)
     cubemapFilter.update(lightEstimate.acquireEnvironmentalHdrCubeMap())
   }
+  private val lineVertices = mutableListOf<Float>()
+
+  private fun addAnchorPosition(anchor: Anchor) {
+    val pose = anchor.pose
+    lineVertices.add(pose.tx())
+    lineVertices.add(pose.ty())
+    lineVertices.add(pose.tz())
+  }
+
+  private fun drawLine() {
+    if (lineVertices.size < 6) return // Need at least two points
+
+    val vertexBuffer = ByteBuffer.allocateDirect(lineVertices.size * 4)
+      .order(ByteOrder.nativeOrder())
+      .asFloatBuffer()
+      .put(lineVertices.toFloatArray())
+    vertexBuffer.position(0)
+
+    GLES20.glEnableVertexAttribArray(0)
+    GLES20.glVertexAttribPointer(
+      0, 3, GLES20.GL_FLOAT, false,
+      3 * 4, vertexBuffer
+    )
+
+    GLES20.glDrawArrays(GLES20.GL_LINES, 0, lineVertices.size / 3)
+
+    GLES20.glDisableVertexAttribArray(0)
+  }
 
   private fun updateMainLight(
     direction: FloatArray,
@@ -514,7 +555,13 @@ class HelloArRenderer(val activity: HelloArActivity) :
       // Adding an Anchor tells ARCore that it should track this position in
       // space. This anchor is created on the Plane to place the 3D model
       // in the correct position relative both to the world and to the plane.
-      wrappedAnchors.add(WrappedAnchor(firstHitResult.createAnchor(), firstHitResult.trackable))
+      val anchor = firstHitResult.createAnchor()
+      val anchorPose = anchor.pose
+      val anchorTranslation = anchorPose.translation
+      val anchorPosition = floatArrayOf(anchorTranslation[0], anchorTranslation[1], anchorTranslation[2])
+      wrappedAnchors.add(WrappedAnchor(anchor, firstHitResult.trackable))
+
+      addAnchorPosition(anchor)
 
       // For devices that support the Depth API, shows a dialog to suggest enabling
       // depth-based occlusion. This dialog needs to be spawned on the UI thread.
@@ -530,7 +577,7 @@ class HelloArRenderer(val activity: HelloArActivity) :
  * Associates an Anchor with the trackable it was attached to. This is used to be able to check
  * whether or not an Anchor originally was attached to an {@link InstantPlacementPoint}.
  */
-private data class WrappedAnchor(
+data class WrappedAnchor(
   val anchor: Anchor,
   val trackable: Trackable,
 )

@@ -16,8 +16,11 @@
 package com.google.ar.core.examples.java.common.samplerender;
 
 import android.content.res.AssetManager;
+import android.opengl.GLES20;
 import android.opengl.GLES30;
 import android.opengl.GLSurfaceView;
+import android.util.Log;
+
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
@@ -60,7 +63,7 @@ public class SampleRender {
 
           @Override
           public void onDrawFrame(GL10 gl) {
-            clear(/*framebuffer=*/ null, 0f, 0f, 0f, 1f);
+//            clear(/*framebuffer=*/ null, 0f, 0f, 0f, 1f);
             renderer.onDrawFrame(SampleRender.this);
           }
         });
@@ -129,22 +132,28 @@ public class SampleRender {
     return assetManager;
   }
 
-  private void useFramebuffer(Framebuffer framebuffer) {
+  public void useFramebuffer(Framebuffer framebuffer) {
     int framebufferId;
     int viewportWidth;
     int viewportHeight;
     if (framebuffer == null) {
-      framebufferId = 0;
+      framebufferId = 0; // Sử dụng framebuffer mặc định
       viewportWidth = this.viewportWidth;
       viewportHeight = this.viewportHeight;
     } else {
+      // Kiểm tra trạng thái framebuffer
+      int status = GLES20.glCheckFramebufferStatus(GLES20.GL_FRAMEBUFFER);
+      if (status != GLES20.GL_FRAMEBUFFER_COMPLETE) {
+        Log.e(TAG, "Framebuffer not complete, status: " + status);
+        return; // Không bind framebuffer nếu không hoàn chỉnh
+      }
       framebufferId = framebuffer.getFramebufferId();
       viewportWidth = framebuffer.getWidth();
       viewportHeight = framebuffer.getHeight();
     }
     GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, framebufferId);
-    GLError.maybeThrowGLException("Failed to bind framebuffer", "glBindFramebuffer");
+    GLError.maybeThrowGLException("Failed to bind framebuffer", "glBindFramebuffer"); // Kiểm tra lỗi OpenGL
     GLES30.glViewport(0, 0, viewportWidth, viewportHeight);
-    GLError.maybeThrowGLException("Failed to set viewport dimensions", "glViewport");
+    GLError.maybeThrowGLException("Failed to set viewport dimensions", "glViewport"); // Kiểm tra lỗi OpenGL
   }
 }

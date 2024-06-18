@@ -48,6 +48,16 @@ class HelloArView(val activity: HelloArActivity) : DefaultLifecycleObserver {
       }
     }
 
+  val undoButton = root.findViewById<ImageButton>(R.id.undo_button).apply {
+    setOnClickListener { v ->
+      activity.renderer.wrappedAnchors.let {
+        if (it.isNotEmpty()) {
+          it.removeAt(it.size - 1)
+        }
+      }
+    }
+  }
+
   val session
     get() = activity.arCoreSessionHelper.session
 
