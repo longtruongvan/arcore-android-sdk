@@ -29,26 +29,6 @@
         android:layout_alignParentBottom="true"
         android:layout_gravity="top" />
 
-    <com.google.ar.core.examples.kotlin.helloar.RectangleView
-        android:id="@+id/retangView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentTop="true"
-        android:layout_alignParentRight="true"
-        android:layout_alignParentBottom="true"
-        android:visibility="gone" />
-
-    <com.google.ar.core.examples.kotlin.helloar.CustomView
-        android:id="@+id/custom_view"
-        android:visibility="gone"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentTop="true"
-        android:layout_alignParentRight="true"
-        android:layout_alignParentBottom="true" />
-
     <ImageButton
         android:id="@+id/settings_button"
         android:layout_width="wrap_content"
